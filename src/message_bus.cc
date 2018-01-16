@@ -47,7 +47,7 @@ void plugin::PS_amqp::message_bus_publisher::initialize()
 
 		qu2 = amqp.createQueue(queue);
 		qu2->Declare(queue, AMQP_DURABLE);
-		qu2->Bind(exchange, "");
+		qu2->Bind(exchange, queue);
 
 		// Force the disabling of the immediate flag. Yes.. it is misspelled
 		// by the authors.
@@ -63,6 +63,6 @@ void plugin::PS_amqp::message_bus_publisher::publish(std::string msg)
 {
 	if(!queue.empty()) 
 	{
-		ex->Publish(msg, "");
+		ex->Publish(msg, queue);
 	}
 }

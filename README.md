@@ -31,19 +31,20 @@ Using PS::amqp requires instantiating a Bro Log Filter as shown below. From ther
 
 ```bro
 event bro_init() {
-             local filter: Log::Filter = [
+	local conn_filter: Log::Filter = 
+	[
 		$name="amqp",
-		$config=table(["connstr"]  = "username:password@localhost:5672",
-                  ["exchange"] = "our.direct",
-                  ["queue"]    = "queue"),
+		$config=table(
+		["connstr"]  = "user:pass@localhost:5672//",
+		["exchange"] = "bro_exchange",
+		["queue"]    = "conn_queue"),
 		$writer=Log::WRITER_AMQP
 	];
-
-	Log::create_stream(amqp_test::LOG, [$columns=Info, $ev=log_amqp_test]);
-	Log::add_filter(amqp_test::LOG, filter);
-	Log::remove_filter(amqp_test::LOG, "default");
+	Log::add_filter(Conn::LOG, conn_filter);
 }
 ```
+
+Repeat the above for each stream you want to capture
 
 ## License
 
