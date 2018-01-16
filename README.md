@@ -3,7 +3,7 @@
 
 
 ## Introduction
-This is a modified version of a plugin orginally created by Packetsled. The original is available at <https://github.com/Rwilson1729/bro_amqp_plugin>
+This is a modified version of a plugin orginally created by Packetsled. The original is available at <https://github.com/packetsled/bro_amqp_plugin>
 
 PS::amp is a plugin that provides support for writing data to an ``AMQP`` server.
 This plugin provides support the ``AMQP Protocol,`` specifically ``RabbitMQ.``
