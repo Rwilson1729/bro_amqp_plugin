@@ -43,14 +43,18 @@ namespace plugin
 
 #define AMQP_RETRY_INTERVAL	120
 
-namespace logging {
-	namespace writer {
-		class amqp : public WriterBackend {
+namespace logging 
+{
+	namespace writer 
+	{
+		class amqp : public WriterBackend 
+		{
 			public:
 				amqp(WriterFrontend* frontend);
 				~amqp();
 
-				static WriterBackend* Instantiate(WriterFrontend* frontend)	{
+				static WriterBackend* Instantiate(WriterFrontend* frontend)	
+				{
 					return new amqp(frontend);
 				}
 
@@ -85,9 +89,6 @@ namespace logging {
 				std::string message_bus_connstr;
 				std::string message_bus_exchange;
 				std::string message_bus_queue;
-				std::string probeid;
-				std::string envid;
-
 		};
 	}
 }

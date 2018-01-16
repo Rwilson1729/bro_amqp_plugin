@@ -3,6 +3,8 @@
 
 
 ## Introduction
+This is a modified version of a plugin orginally created by Packetsled. The original is available at <https://github.com/Rwilson1729/bro_amqp_plugin>
+
 PS::amp is a plugin that provides support for writing data to an ``AMQP`` server.
 This plugin provides support the ``AMQP Protocol,`` specifically ``RabbitMQ.``
 
@@ -20,17 +22,18 @@ This plugin provides support the ``AMQP Protocol,`` specifically ``RabbitMQ.``
     make -j10
     make install
 
+If you need to modify the options for an exchange or queue see the labelled block in message\_bus\_publisher::initialize() in message\_bus.cc
+
 ## Usage
 
 Using PS::amqp requires instantiating a Bro Log Filter as shown below. From there, a write to the created log will cause the plugin to send the data to the AMQP server.
 
-**Note**: "password" and "username" are in the appropriate order per the underlying libraries being used.
 
 ```bro
 event bro_init() {
              local filter: Log::Filter = [
 		$name="amqp",
-		$config=table(["connstr"]  = "password:username@localhost:5672",
+		$config=table(["connstr"]  = "username:password@localhost:5672",
                   ["exchange"] = "our.direct",
                   ["queue"]    = "queue"),
 		$writer=Log::WRITER_AMQP

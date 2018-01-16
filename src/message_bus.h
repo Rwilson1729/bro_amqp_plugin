@@ -27,9 +27,12 @@
 
 using namespace std;
 
-namespace plugin {
-	namespace PS_amqp {
-		class message_bus_publisher {
+namespace plugin 
+{
+	namespace PS_amqp 
+	{
+		class message_bus_publisher 
+		{
 			public:
 				message_bus_publisher(std::string connStr, std::string _exchange, std::string _queue);
 				~message_bus_publisher();

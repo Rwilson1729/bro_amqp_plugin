@@ -20,15 +20,12 @@
 // Aaron Eppert - PacketSled - 2015
 #include "message_bus.h"
 
-//using namespace plugin::PS_amqp;
-
 //
 // connStr -> "<password>:<login>@<hostname>:<port>"
 //
 plugin::PS_amqp::message_bus_publisher::message_bus_publisher(std::string connStr, std::string _exchange, std::string _queue) :
 					amqp(connStr), exchange(_exchange), queue(_queue)
 {
-	// std::cout << "message_bus_publisher::message_bus_publisher(" << connStr << "," << _exchange << "," << _queue << ")" << std::endl;
 }
 
 plugin::PS_amqp::message_bus_publisher::~message_bus_publisher()
@@ -38,8 +35,14 @@ plugin::PS_amqp::message_bus_publisher::~message_bus_publisher()
 
 void plugin::PS_amqp::message_bus_publisher::initialize()
 {
-	if(!exchange.empty()) {
+	if(!exchange.empty()) 
+	{
 		ex = amqp.createExchange(exchange);
+
+		//TODO: add the ability to modify exchange and queue options
+		/*******************
+		** Modify this block in order to change exchange and queue options
+		*******************/
 		ex->Declare(exchange, "direct", AMQP_DURABLE);
 
 		qu2 = amqp.createQueue(queue);
@@ -58,9 +61,8 @@ void plugin::PS_amqp::message_bus_publisher::initialize()
 
 void plugin::PS_amqp::message_bus_publisher::publish(std::string msg)
 {
-	// std::cout << "PS_amqp - message_bus_publisher::publish - msg = " << msg << std::endl;
-
-	if(!queue.empty()) {
+	if(!queue.empty()) 
+	{
 		ex->Publish(msg, "");
 	}
 }
