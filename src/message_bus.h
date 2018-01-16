@@ -38,6 +38,7 @@ namespace plugin {
 			private:
 				AMQP amqp;
 				AMQPExchange *ex;
+				AMQPQueue * qu2;
 				std::string exchange;
 				std::string queue;
 		};

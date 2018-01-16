@@ -18,8 +18,6 @@
 
  */
 // Aaron Eppert - PacketSled - 2015
-#include "config.h"
-
 #include <string>
 #include <iostream>
 #include <vector>
@@ -101,7 +99,8 @@ std::string amqp::GetTableType(int arg_type, int arg_subtype) {
 }
 
 // returns true true in case of error
-bool amqp::checkError(int code) {
+bool amqp::checkError(int code) 
+{
 //	if (code != SQLITE_OK && code != SQLITE_DONE) {
 //		Error(Fmt("SQLite call failed: %s", sqlite3_errmsg(db)));
 //		return true;
@@ -113,11 +112,13 @@ bool amqp::checkError(int code) {
 bool amqp::Init(void)
 {
 	if(message_bus_connstr.empty() || message_bus_exchange.empty() ||
-	   message_bus_queue.empty()   || probeid.empty() ||  envid.empty() ) {
+	   message_bus_queue.empty()   || probeid.empty() ||  envid.empty() ) 
+        {
 		return false;
 	}
 
-	try {
+	try 
+	{
 
 		path = Fmt("\"sensor\": \"probe_%s_%s\",", envid.c_str(), probeid.c_str());
 
@@ -130,22 +131,28 @@ bool amqp::Init(void)
 		}
 		*/
 
-		message_bus_pub = new plugin::PS_amqp::message_bus_publisher(
-											message_bus_connstr, message_bus_exchange, message_bus_queue);
-		if (!message_bus_pub) {
+		message_bus_pub = new plugin::PS_amqp::message_bus_publisher(message_bus_connstr, message_bus_exchange, message_bus_queue);
+		if (!message_bus_pub) 
+                {
 			return false;
 		}
 
 		message_bus_pub->initialize();
 
 		return true;
-	} catch (AMQPException e) {
+	} 
+	catch (AMQPException e) 
+        {
 		MsgThread::Info(Fmt("PS_amqp - Init - AMQPException: %s", e.getMessage().c_str()));
 		ReInit();
-	} catch (const std::exception &exc) {
-		MsgThread::Info(Fmt("PS_amqp - Init - std::exception: %s ", exc.what()));
-	    ReInit();
-	} catch(...) {
+	} 
+	catch (const std::exception &exc) 
+        {
+                MsgThread::Info(Fmt("PS_amqp - Init - std::exception: %s ", exc.what()));
+                ReInit();
+	} 
+	catch(...) 
+        {
 		MsgThread::Info("PS_amqp - Init - Exception found");
 		ReInit();
 	}

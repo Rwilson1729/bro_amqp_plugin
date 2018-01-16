@@ -25,8 +25,6 @@
 #ifndef LOGGING_WRITER_AMQP_H
 #define LOGGING_WRITER_AMQP_H
 
-#include "config.h"
-
 #include <string>
 #include "logging/WriterBackend.h"
 #include "threading/formatters/JSON.h"
@@ -34,6 +32,14 @@
 #include <unistd.h>
 
 using namespace std;
+
+namespace plugin
+{
+	namespace PS_amqp
+	{
+		class message_bus_publisher;
+	}
+}
 
 #define AMQP_RETRY_INTERVAL	120
 
