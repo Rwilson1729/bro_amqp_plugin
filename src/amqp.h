@@ -26,20 +26,14 @@
 #define LOGGING_WRITER_AMQP_H
 
 #include <string>
-#include "logging/WriterBackend.h"
-#include "threading/formatters/JSON.h"
-#include "message_bus.h"
 #include <unistd.h>
 
-using namespace std;
+#include "logging/WriterBackend.h"
+#include "threading/formatters/JSON.h"
+#include "threading/SerialTypes.h"
+#include "AMQPcpp.h"
 
-namespace plugin
-{
-	namespace PS_amqp
-	{
-		class message_bus_publisher;
-	}
-}
+using namespace std;
 
 #define AMQP_RETRY_INTERVAL	120
 
@@ -74,21 +68,26 @@ namespace logging
 				bool checkError(int code);
 
 				int AddParams(threading::Value* val, int pos);
-				std::string GetTableType(int, int);
+				string GetTableType(int, int);
 
 				const threading::Field* const *fields; // raw mapping
 				unsigned int num_fields;
 
-				plugin::PS_amqp::message_bus_publisher *message_bus_pub;
 				threading::formatter::JSON *json;
 
 				bool odesc_to_string_writer(const ODesc &buffer, bool add_log_path);
 
-				std::string info_path;
-				std::string path;
-				std::string message_bus_connstr;
-				std::string message_bus_exchange;
-				std::string message_bus_queue;
+				string info_path;
+				string path;
+                                
+                                void DestroyAMQP();
+                                
+                                AMQP *amqp_conn;
+				AMQPExchange *exchange;
+				AMQPQueue * queue;
+                                string connstr;
+				string exchange_name;
+				string queue_name;
 		};
 	}
 }

@@ -29,7 +29,6 @@
 #include "threading/formatters/Ascii.h"
 #include "threading/SerialTypes.h"
 
-using namespace plugin::PS_amqp;
 using namespace logging;
 using namespace writer;
 using namespace std;
@@ -37,62 +36,64 @@ using namespace std;
 using threading::Value;
 using threading::Field;
 
-amqp::amqp(WriterFrontend* frontend) :
-		WriterBackend(frontend) {
-	json = new threading::formatter::JSON(this,
-			threading::formatter::JSON::TS_EPOCH);
+amqp::amqp(WriterFrontend* frontend) : WriterBackend(frontend) 
+{
+    json = new threading::formatter::JSON(this, threading::formatter::JSON::TS_EPOCH);
 }
 
-amqp::~amqp() {
-	if (json) {
-		delete json;
-	}
+amqp::~amqp() 
+{
+    if (json) 
+    {
+        delete json;
+    }
 
-	if (message_bus_pub) {
-		delete message_bus_pub;
-	}
+    DestroyAMQP();
+
 }
 
-std::string amqp::GetTableType(int arg_type, int arg_subtype) {
+std::string amqp::GetTableType(int arg_type, int arg_subtype) 
+{
 	std::string type;
 
-	switch (arg_type) {
-	case TYPE_BOOL:
-		type = "boolean";
-		break;
+	switch (arg_type) 
+        {
+            case TYPE_BOOL:
+                    type = "boolean";
+                    break;
 
-	case TYPE_INT:
-	case TYPE_COUNT:
-	case TYPE_COUNTER:
-	case TYPE_PORT:
-		type = "integer";
-		break;
+            case TYPE_INT:
+            case TYPE_COUNT:
+            case TYPE_COUNTER:
+            case TYPE_PORT:
+                    type = "integer";
+                    break;
 
-	case TYPE_SUBNET:
-	case TYPE_ADDR:
-		type = "text";
-		break;
+            case TYPE_SUBNET:
+            case TYPE_ADDR:
+                    type = "text";
+                    break;
 
-	case TYPE_TIME:
-	case TYPE_INTERVAL:
-	case TYPE_DOUBLE:
-		type = "double precision";
-		break;
+            case TYPE_TIME:
+            case TYPE_INTERVAL:
+            case TYPE_DOUBLE:
+                    type = "double precision";
+                    break;
 
-	case TYPE_ENUM:
-	case TYPE_STRING:
-	case TYPE_FILE:
-	case TYPE_FUNC:
-		type = "text";
-		break;
+            case TYPE_ENUM:
+            case TYPE_STRING:
+            case TYPE_FILE:
+            case TYPE_FUNC:
+                    type = "text";
+                    break;
 
-	case TYPE_TABLE:
-	case TYPE_VECTOR:
-		type = "text";
-		break;
+            case TYPE_TABLE:
+            case TYPE_VECTOR:
+                    type = "text";
+                    break;
 
-	default:
-		type = Fmt("%d", arg_type);
+            default:
+                    type = Fmt("%d", arg_type);
 	}
 
 	return type;
@@ -106,23 +107,35 @@ bool amqp::checkError(int code)
 
 bool amqp::Init(void)
 {
-	if(message_bus_connstr.empty() || message_bus_exchange.empty() ||
-	   message_bus_queue.empty()) 
+	if(connstr.empty() || exchange_name.empty() || queue_name.empty()) 
         {
 		return false;
 	}
 
 	try 
 	{
-		message_bus_pub = new plugin::PS_amqp::message_bus_publisher(message_bus_connstr, message_bus_exchange, message_bus_queue);
-		if (!message_bus_pub) 
-                {
-			return false;
-		}
+            amqp_conn = new AMQP(connstr);
+            exchange = amqp_conn->createExchange(exchange_name);
 
-		message_bus_pub->initialize();
+            //TODO: add the ability to modify exchange and queue options
+            /*******************
+            ** Modify this block in order to change exchange and queue options
+            *******************/
+            exchange->Declare(exchange_name, "direct", AMQP_DURABLE);
 
-		return true;
+            queue = amqp_conn->createQueue(queue_name);
+            queue->Declare(queue_name, AMQP_DURABLE);
+            queue->Bind(exchange_name, queue_name);
+
+            // Force the disabling of the immediate flag. Yes.. it is misspelled
+            // by the authors.
+            exchange->setParam(~AMQP_IMMIDIATE);
+
+            exchange->setHeader("Delivery-mode", 2);
+            exchange->setHeader("Content-type", "application/json");
+            exchange->setHeader("Content-encoding", "UTF-8");
+
+            return true;
 	} 
 	catch (AMQPException e) 
         {
@@ -143,28 +156,34 @@ bool amqp::Init(void)
 	return false;
 }
 
+/* Gracefully teardown and delete AQMP */
+void amqp::DestroyAMQP(void)
+{
+    if (queue)
+        delete queue;
+    
+    if (exchange)
+        delete exchange;
+    
+    if (amqp_conn)
+        delete amqp_conn;
+}
+
 bool amqp::ReInit(void)
 {
 	bool ret = false;
 
-	if(message_bus_connstr.empty() || message_bus_exchange.empty() ||
-	   message_bus_queue.empty()) 
+	if(connstr.empty() || exchange_name.empty() || queue_name.empty()) 
 	{
 		return false;
 	}
 
 	try 
 	{
-		if(message_bus_pub) 
-		{
-			MsgThread::Info("PS_amqp - Attempt to reinitialize");
-			if (message_bus_pub) 
-			{
-				delete message_bus_pub;
-			}
-			sleep(AMQP_RETRY_INTERVAL);
-			Init();
-		}
+            MsgThread::Info("PS_amqp - Attempt to reinitialize");
+            DestroyAMQP();
+            sleep(AMQP_RETRY_INTERVAL);
+            Init();
 	} 
 	catch(...) 
 	{
@@ -177,64 +196,64 @@ bool amqp::ReInit(void)
 bool amqp::DoInit(const WriterInfo& info, int arg_num_fields,
 		const Field* const * arg_fields)
 {
-	bool ret = false;
+    bool ret = false;
 
-	WriterInfo::config_map::const_iterator it;
-	num_fields = arg_num_fields;
-	fields = arg_fields;
+    WriterInfo::config_map::const_iterator it;
+    num_fields = arg_num_fields;
+    fields = arg_fields;
 
-	try 
-	{
-		it = info.config.find("connstr");
-		if (it == info.config.end()) 
-		{
-			MsgThread::Info(Fmt("connstr configuration option not found"));
-			return false;
-		} 
-		else 
-		{
-			message_bus_connstr = it->second;
-		}
+    try 
+    {
+        it = info.config.find("connstr");
+        if (it == info.config.end()) 
+        {
+            MsgThread::Info(Fmt("connstr configuration option not found"));
+            return false;
+        } 
+        else 
+        {
+            connstr = it->second;
+        }
 
-		it = info.config.find("exchange");
-		if (it == info.config.end()) 
-		{
-			MsgThread::Info(Fmt("exchange configuration option not found"));
-			return false;
-		} 
-		else 
-		{
-			message_bus_exchange = it->second;
-		}
+        it = info.config.find("exchange");
+        if (it == info.config.end()) 
+        {
+            MsgThread::Info(Fmt("exchange configuration option not found"));
+            return false;
+        } 
+        else 
+        {
+            exchange_name = it->second;
+        }
 
-		it = info.config.find("queue");
-		if (it == info.config.end()) 
-		{
-			MsgThread::Info(Fmt("queue configuration option not found"));
-			return false;
-		} 
-		else 
-		{
-			message_bus_queue = it->second;
-		}
+        it = info.config.find("queue");
+        if (it == info.config.end()) 
+        {
+            MsgThread::Info(Fmt("queue configuration option not found"));
+            return false;
+        } 
+        else 
+        {
+            queue_name = it->second;
+        }
 
-		info_path = info.path;
+        info_path = info.path;
 
-		return Init();
-	} 
-	catch (...) 
-	{
-		MsgThread::Info("PS_amqp - DoInit - Exception found");
-	}
+        return Init();
+    } 
+    catch (...) 
+    {
+        MsgThread::Info("PS_amqp - DoInit - Exception found");
+    }
 
-	return false;
+    return false;
 }
 
 bool amqp::odesc_to_string_writer(const ODesc &buffer, bool add_log_path) 
 {
 	bool ret = false;
 
-	std::string out_buf = std::string(reinterpret_cast<const char*>(buffer.Bytes()));
+	string out_buf = string(reinterpret_cast<const char*>(buffer.Bytes()));
 	out_buf = out_buf.insert(1, path);
 
 	if (add_log_path) 
@@ -244,9 +263,9 @@ bool amqp::odesc_to_string_writer(const ODesc &buffer, bool add_log_path)
 
 	try 
 	{
-		if (!out_buf.empty()) 
+		if (!out_buf.empty() && !queue_name.empty()) 
 		{
-			message_bus_pub->publish(out_buf);
+                        exchange->Publish(out_buf, queue_name);
 			ret = true;
 		}
 	} 
@@ -270,23 +289,21 @@ bool amqp::DoWrite(int num_fields, const Field* const * fields, Value** vals)
 	{
 		bool add_log_path = true;
 
-		if (message_bus_pub) 
-		{
-			ODesc buffer;
+                ODesc buffer;
 
-			for ( int j = 0; j < num_fields; j++ ) 
-			{
-				const threading::Field* field = fields[j];
-				if ( strncasecmp(field->name, "log", 3) == 0 ) 
-				{
-					add_log_path = false;
-					break;
-				}
-			}
+                for ( int j = 0; j < num_fields; j++ ) 
+                {
+                    const threading::Field* field = fields[j];
+                    if ( strncasecmp(field->name, "log", 3) == 0 ) 
+                    {
+                        add_log_path = false;
+                        break;
+                    }
+                }
 
-			json->Describe(&buffer, num_fields, fields, vals);
-			odesc_to_string_writer(buffer, add_log_path);
-		}
+                json->Describe(&buffer, num_fields, fields, vals);
+                odesc_to_string_writer(buffer, add_log_path);
+
 	} 
 	catch (...) 
 	{
