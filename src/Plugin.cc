@@ -22,36 +22,43 @@
 #include <string>
 #include <iostream>
 #include "Plugin.h"
-#include "message_bus.h"
 
-namespace plugin {
-	namespace PS_amqp {
+namespace plugin 
+{
+	namespace PS_amqp 
+	{
 		Plugin plugin;
 	}
 }
 
-Plugin::Plugin() {
+using namespace plugin::PS_amqp;
+
+Plugin::Plugin() 
+{
 }
 
-Plugin::~Plugin() {
+Plugin::~Plugin() 
+{
 
 }
 
-void Plugin::InitPostScript() {
+void Plugin::InitPostScript() 
+{
 	::plugin::Plugin::InitPostScript();
 }
 
-void Plugin::Done() {
+void Plugin::Done() 
+{
 	::plugin::Plugin::Done();
 }
 
-WriterBackend* Plugin::Instantiate(WriterFrontend* frontend) {
-	//std::cout << "AMQP - Plugin::Instantiate(" << frontend << ")" << std::endl;
-
+WriterBackend* Plugin::Instantiate(WriterFrontend* frontend) 
+{
 	return new ::logging::writer::amqp(frontend);
 }
 
-plugin::Configuration Plugin::Configure() {
+plugin::Configuration Plugin::Configure() 
+{
 	AddComponent(new ::logging::Component("amqp", Plugin::Instantiate));
 
 	plugin::Configuration config;

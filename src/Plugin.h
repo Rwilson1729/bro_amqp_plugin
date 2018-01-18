@@ -25,15 +25,16 @@
 #include <plugin/Plugin.h>
 #include <DebugLogger.h>
 #include "amqp.h"
-#include "message_bus.h"
 
-using namespace plugin::PS_amqp;
 using namespace logging;
 
-namespace plugin {
-	namespace PS_amqp {
+namespace plugin 
+{
+	namespace PS_amqp 
+	{
 
-	class Plugin : public ::plugin::Plugin {
+	class Plugin : public plugin::Plugin 
+	{
 			public:
 				Plugin();
 				~Plugin();
@@ -44,9 +45,9 @@ namespace plugin {
 				// Overridden from plugin::Plugin.
 				virtual plugin::Configuration Configure();
 			private:
-		};
+        };
 
-		extern Plugin plugin;
+        extern Plugin plugin;
 	}
 }
 #endif

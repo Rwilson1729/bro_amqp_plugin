@@ -54,106 +54,106 @@ amqp::~amqp()
 
 std::string amqp::GetTableType(int arg_type, int arg_subtype) 
 {
-	std::string type;
+    string type;
 
-	switch (arg_type) 
-        {
-            case TYPE_BOOL:
-                    type = "boolean";
-                    break;
+    switch (arg_type) 
+    {
+        case TYPE_BOOL:
+            type = "boolean";
+            break;
 
-            case TYPE_INT:
-            case TYPE_COUNT:
-            case TYPE_COUNTER:
-            case TYPE_PORT:
-                    type = "integer";
-                    break;
+        case TYPE_INT:
+        case TYPE_COUNT:
+        case TYPE_COUNTER:
+        case TYPE_PORT:
+            type = "integer";
+            break;
 
-            case TYPE_SUBNET:
-            case TYPE_ADDR:
-                    type = "text";
-                    break;
+        case TYPE_SUBNET:
+        case TYPE_ADDR:
+            type = "text";
+            break;
 
-            case TYPE_TIME:
-            case TYPE_INTERVAL:
-            case TYPE_DOUBLE:
-                    type = "double precision";
-                    break;
+        case TYPE_TIME:
+        case TYPE_INTERVAL:
+        case TYPE_DOUBLE:
+            type = "double precision";
+            break;
 
-            case TYPE_ENUM:
-            case TYPE_STRING:
-            case TYPE_FILE:
-            case TYPE_FUNC:
-                    type = "text";
-                    break;
+        case TYPE_ENUM:
+        case TYPE_STRING:
+        case TYPE_FILE:
+        case TYPE_FUNC:
+            type = "text";
+            break;
 
-            case TYPE_TABLE:
-            case TYPE_VECTOR:
-                    type = "text";
-                    break;
+        case TYPE_TABLE:
+        case TYPE_VECTOR:
+            type = "text";
+            break;
 
-            default:
-                    type = Fmt("%d", arg_type);
-	}
+        default:
+            type = Fmt("%d", arg_type);
+    }
 
-	return type;
+    return type;
 }
 
 // returns true true in case of error
 bool amqp::checkError(int code) 
 {
-	return false;
+    return false;
 }
 
 bool amqp::Init(void)
 {
-	if(connstr.empty() || exchange_name.empty() || queue_name.empty()) 
-        {
-		return false;
-	}
+    if(connstr.empty() || exchange_name.empty() || queue_name.empty()) 
+    {
+        return false;
+    }
 
-	try 
-	{
-            amqp_conn = new AMQP(connstr);
-            exchange = amqp_conn->createExchange(exchange_name);
+    try 
+    {
+        amqp_conn = new AMQP(connstr);
+        exchange = amqp_conn->createExchange(exchange_name);
 
-            //TODO: add the ability to modify exchange and queue options
-            /*******************
-            ** Modify this block in order to change exchange and queue options
-            *******************/
-            exchange->Declare(exchange_name, "direct", AMQP_DURABLE);
+        //TODO: add the ability to modify exchange and queue options
+        /*******************
+        ** Modify this block in order to change exchange and queue options
+        *******************/
+        exchange->Declare(exchange_name, "direct", AMQP_DURABLE);
 
-            queue = amqp_conn->createQueue(queue_name);
-            queue->Declare(queue_name, AMQP_DURABLE);
-            queue->Bind(exchange_name, queue_name);
+        queue = amqp_conn->createQueue(queue_name);
+        queue->Declare(queue_name, AMQP_DURABLE);
+        queue->Bind(exchange_name, queue_name);
 
-            // Force the disabling of the immediate flag. Yes.. it is misspelled
-            // by the authors.
-            exchange->setParam(~AMQP_IMMIDIATE);
+        // Force the disabling of the immediate flag. Yes.. it is misspelled
+        // by the authors.
+        exchange->setParam(~AMQP_IMMIDIATE);
 
-            exchange->setHeader("Delivery-mode", 2);
-            exchange->setHeader("Content-type", "application/json");
-            exchange->setHeader("Content-encoding", "UTF-8");
+        exchange->setHeader("Delivery-mode", 2);
+        exchange->setHeader("Content-type", "application/json");
+        exchange->setHeader("Content-encoding", "UTF-8");
 
-            return true;
-	} 
-	catch (AMQPException e) 
-        {
-		MsgThread::Info(Fmt("PS_amqp - Init - AMQPException: %s", e.getMessage().c_str()));
-		ReInit();
-	} 
-	catch (const std::exception &exc) 
-        {
-                MsgThread::Info(Fmt("PS_amqp - Init - std::exception: %s ", exc.what()));
-                ReInit();
-	} 
-	catch(...) 
-        {
-		MsgThread::Info("PS_amqp - Init - Exception found");
-		ReInit();
-	}
+        return true;
+    } 
+    catch (AMQPException e) 
+    {
+        MsgThread::Info(Fmt("PS_amqp - Init - AMQPException: %s", e.getMessage().c_str()));
+        ReInit();
+    } 
+    catch (const std::exception &exc) 
+    {
+        MsgThread::Info(Fmt("PS_amqp - Init - std::exception: %s ", exc.what()));
+        ReInit();
+    } 
+    catch(...) 
+    {
+        MsgThread::Info("PS_amqp - Init - Exception found");
+        ReInit();
+    }
 
-	return false;
+    return false;
 }
 
 /* Gracefully teardown and delete AQMP */
@@ -171,33 +171,29 @@ void amqp::DestroyAMQP(void)
 
 bool amqp::ReInit(void)
 {
-	bool ret = false;
+    if(connstr.empty() || exchange_name.empty() || queue_name.empty()) 
+    {
+        return false;
+    }
 
-	if(connstr.empty() || exchange_name.empty() || queue_name.empty()) 
-	{
-		return false;
-	}
+    try 
+    {
+        MsgThread::Info("PS_amqp - Attempt to reinitialize");
+        DestroyAMQP();
+        sleep(AMQP_RETRY_INTERVAL);
+        Init();
+    } 
+    catch(...) 
+    {
+        MsgThread::Info("PS_amqp - Exception found");
+    }
 
-	try 
-	{
-            MsgThread::Info("PS_amqp - Attempt to reinitialize");
-            DestroyAMQP();
-            sleep(AMQP_RETRY_INTERVAL);
-            Init();
-	} 
-	catch(...) 
-	{
-		MsgThread::Info("PS_amqp - Exception found");
-	}
-
-	return true;
+    return true;
 }
 
 bool amqp::DoInit(const WriterInfo& info, int arg_num_fields,
 		const Field* const * arg_fields)
 {
-    bool ret = false;
-
     WriterInfo::config_map::const_iterator it;
     num_fields = arg_num_fields;
     fields = arg_fields;
@@ -251,75 +247,72 @@ bool amqp::DoInit(const WriterInfo& info, int arg_num_fields,
 
 bool amqp::odesc_to_string_writer(const ODesc &buffer, bool add_log_path) 
 {
-	bool ret = false;
+    string out_buf = string(reinterpret_cast<const char*>(buffer.Bytes()));
+    out_buf = out_buf.insert(1, path);
 
-	string out_buf = string(reinterpret_cast<const char*>(buffer.Bytes()));
-	out_buf = out_buf.insert(1, path);
+    if (add_log_path) 
+    {
+        out_buf = out_buf.insert(1, Fmt("\"log\": \"%s\",", info_path.c_str()));
+    }
 
-	if (add_log_path) 
-	{
-		out_buf = out_buf.insert(1, Fmt("\"log\": \"%s\",", info_path.c_str()));
-	}
+    try 
+    {
+        if (!out_buf.empty() && !queue_name.empty()) 
+        {
+            exchange->Publish(out_buf, queue_name);
+        }
+    } 
+    catch (AMQPException e) 
+    {
+        MsgThread::Info(Fmt("PS_amqp - odesc_to_string_writer(\"%s\") - AMQPException: %s", 
+                            out_buf.c_str(), e.getMessage().c_str()));
+        ReInit();
+    } 
+    catch (...) 
+    {
+        MsgThread::Info("PS_amqp - odesc_to_string_writer - Exception found");
+    }
 
-	try 
-	{
-		if (!out_buf.empty() && !queue_name.empty()) 
-		{
-                        exchange->Publish(out_buf, queue_name);
-			ret = true;
-		}
-	} 
-	catch (AMQPException e) 
-	{
-		MsgThread::Info(Fmt("PS_amqp - odesc_to_string_writer(\"%s\") - AMQPException: %s",
-							out_buf.c_str(), e.getMessage().c_str()));
-		ReInit();
-	} 
-	catch (...) 
-	{
-		MsgThread::Info("PS_amqp - odesc_to_string_writer - Exception found");
-	}
-
-	return true;
+    return true;
 }
 
 bool amqp::DoWrite(int num_fields, const Field* const * fields, Value** vals) 
 {
-	try 
-	{
-		bool add_log_path = true;
+    try 
+    {
+        bool add_log_path = true;
 
-                ODesc buffer;
+        ODesc buffer;
 
-                for ( int j = 0; j < num_fields; j++ ) 
-                {
-                    const threading::Field* field = fields[j];
-                    if ( strncasecmp(field->name, "log", 3) == 0 ) 
-                    {
-                        add_log_path = false;
-                        break;
-                    }
-                }
+        for ( int j = 0; j < num_fields; j++ ) 
+        {
+            const threading::Field* field = fields[j];
+            if ( strncasecmp(field->name, "log", 3) == 0 ) 
+            {
+                add_log_path = false;
+                break;
+            }
+        }
 
-                json->Describe(&buffer, num_fields, fields, vals);
-                odesc_to_string_writer(buffer, add_log_path);
+        json->Describe(&buffer, num_fields, fields, vals);
+        odesc_to_string_writer(buffer, add_log_path);
 
-	} 
-	catch (...) 
-	{
-		MsgThread::Info("PS_amqp - DoWrite - Exception found");
-	}
-	return true;
+    } 
+    catch (...) 
+    {
+        MsgThread::Info("PS_amqp - DoWrite - Exception found");
+    }
+    return true;
 }
 
 bool amqp::DoRotate(const char* rotated_path, double open, double close,
 		bool terminating) 
 {
-	if (!FinishedRotation("/dev/null", Info().path, open, close, terminating)) 
-	{
-		Error(Fmt("error rotating %s", Info().path));
-		return false;
-	}
+    if (!FinishedRotation("/dev/null", Info().path, open, close, terminating)) 
+    {
+        Error(Fmt("error rotating %s", Info().path));
+        return false;
+    }
 
-	return true;
+    return true;
 }
